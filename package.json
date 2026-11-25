@@ -22,7 +22,8 @@
     "README.zh.md",
     "LICENSE",
     "assets",
-    "docs"
+    "docs",
+    "screenshots.json"
   ],
   "engines": {
     "dsh": "^0.2.0-rc.2"
