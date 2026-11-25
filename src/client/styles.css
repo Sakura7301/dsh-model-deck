@@ -1,0 +1,697 @@
+/*
+ * Model seat + model card (ZCode-style picker: provider top bar, fixed-height
+ * scrolling model list, thinking-effort row at the bottom, side columns
+ * opening to the left).
+ *
+ * Class names are static (bundled with the client), so the shell needs no
+ * CSS-module hash step; every name is prefixed `msm_`.
+ */
+
+.msm_root {
+  position: relative;
+  min-width: 0;
+}
+
+/* Figma 313:14108 ToggleButton: 13/20 regular secondary label, 4px gap,
+   12px caption chevron; 28px chip height matches the sibling Plan /
+   Read-only selects in the same tool row. */
+.msm_trigger {
+  anchor-name: var(--dsh-model-anchor);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  /* Preferred width: the composer measures this expanded seat against the
+     space the other controls leave, so the cap must not shrink with the row. */
+  max-width: 360px;
+  flex: 0 0 auto;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  box-sizing: border-box;
+  padding: 0 4px 0 8px;
+  border: none;
+  border-radius: var(--dsw-radius-sm);
+  outline: none;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .msm_trigger:hover:not(:disabled) {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.msm_trigger:focus-visible:not([data-selection-focus]) {
+  box-shadow: 0 0 0 2px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+.msm_trigger:disabled {
+  color: var(--dsw-alias-label-dimmed);
+  cursor: default;
+}
+
+.msm_triggerLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Effort value beside the model name (mock's 'High': same 13/20/400, caption
+   tone). Adaptive priority: the huge shrink factor makes the effort absorb
+   all deficit first — it ellipsizes away to nothing before the model name
+   loses a single pixel, and the chevron stays snug throughout. */
+.msm_triggerEffort {
+  flex-shrink: 1000;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dsw-alias-label-caption);
+}
+
+.msm_triggerIcon {
+  display: var(--dsh-composer-model-icon-display, none);
+  flex: 0 0 auto;
+}
+
+.msm_triggerLabel,
+.msm_triggerEffort {
+  display: var(--dsh-composer-model-text-display, block);
+}
+
+.msm_chevron {
+  flex: 0 0 auto;
+  color: var(--dsw-alias-label-caption);
+  transition: transform 120ms ease;
+}
+
+.msm_chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* The body portal escapes overflow ancestors. CSS anchors keep the card above
+   its trigger; layout viewport bounds do not shrink during pinch zoom. */
+.msm_menu {
+  box-sizing: border-box;
+  position: fixed;
+  position-anchor: var(--dsh-model-anchor);
+  top: max(12px, var(--dsh-frame-overlay-top, 12px));
+  left: 12px;
+  right: anchor(right);
+  bottom: calc(anchor(top) + 8px);
+  align-self: safe end;
+  justify-self: safe end;
+  margin: 0;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  /* Fixed card height: switching models never resizes the picker. */
+  height: min(404px, calc(100dvh - 96px));
+  max-width: min(400px, calc(100vw - 24px));
+  overflow: hidden;
+  padding: 4px;
+  /* Surface tokens match the Menu primitive card (ui-primitives
+     Menu.module.css) so every dropdown reads as the same material. */
+  border: 0;
+  /* The shared menu material is 70% translucent; an opaque base on the card
+     keeps page content from bleeding through while staying theme-aware. */
+  background: var(--dsw-alias-bg-base);
+  /* A crisp edge so the floating card is clearly a surface of its own. */
+  outline: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+  outline-offset: -1px;
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+.msm_menuSingle {
+  width: 360px;
+}
+
+/* Top bar: the provider scoping the list. Hovering it opens the provider
+   column to the left; the card itself never moves or resizes. */
+.msm_header {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  /* Fixed metrics: switching the UI language swaps CJK/Latin font metrics for
+     the provider name, and the bar must not grow or shrink with them. */
+  flex: 0 0 38px;
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border: none;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+}
+
+.msm_header:focus-visible,
+.msm_headerOpen {
+  background: color-mix(in srgb, var(--dsw-alias-interactive-bg-hover) 70%, var(--dsw-alias-border-l1));
+}
+
+@media (hover: hover) {
+  .msm_header:hover {
+    background: color-mix(in srgb, var(--dsw-alias-interactive-bg-hover) 70%, var(--dsw-alias-border-l1));
+  }
+}
+
+.msm_headerLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 20px;
+  font-size: 13px;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.msm_headerCount {
+  flex: 0 0 auto;
+  height: 20px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.msm_headerChevron {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--dsw-alias-menu-icon);
+  transition: transform 120ms ease;
+}
+
+.msm_status,
+.msm_empty {
+  padding: 8px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.msm_error,
+.msm_warning {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+  padding: 6px 7px;
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-interactive-bg-hover-danger);
+  color: var(--dsw-alias-state-error-primary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.msm_warning {
+  background: var(--dsw-alias-bg-module-platform);
+  color: var(--dsw-alias-state-warn-label);
+}
+
+.msm_retry {
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.msm_searchRow {
+  position: relative;
+  flex: 0 0 38px;
+  height: 38px;
+  margin: 6px 4px 4px;
+}
+
+.msm_searchRow .msm_search {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: var(--dsw-radius-md);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.msm_searchRow .msm_search:focus-within {
+  border-color: var(--dsw-alias-state-business-primary);
+}
+
+.msm_searchRow .msm_searchWithQuery {
+  padding-right: 34px;
+}
+
+.msm_searchClear {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  corner-shape: round;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.msm_searchClear:focus-visible {
+  outline: none;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+@media (hover: hover) {
+  .msm_searchClear:hover {
+    outline: none;
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.msm_searchRow .msm_search:focus-within {
+  border-color: transparent;
+}
+
+.msm_searchRow .msm_search input {
+  height: 20px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+@media (pointer: coarse) {
+  .msm_searchRow .msm_search input {
+    font-size: 16px;
+  }
+}
+
+.msm_searchRow .msm_search input::placeholder {
+  color: var(--dsw-alias-label-caption);
+}
+
+/* Fixed-height model list: switching models never changes the card's size. */
+/* The scrollable middle: takes the fixed card's remaining height. */
+.msm_list {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 2px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.msm_option {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-width: 100%;
+  min-height: 34px;
+  padding: 5px 7px;
+  border: none;
+  border-radius: var(--dsw-radius-md);
+  outline: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.msm_option:focus-visible,
+.msm_optionActive:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.msm_modelOption {
+  max-width: 100%;
+}
+
+@media (hover: hover) {
+  .msm_option:not(.msm_modelOption):hover:not(:disabled) {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+/* Selection marker is the trailing check, not a fill — matches the Menu
+ * primitive's selected treatment. */
+.msm_selected {
+  background: transparent;
+}
+
+.msm_option:disabled {
+  color: var(--dsw-alias-label-dimmed);
+  cursor: default;
+}
+
+.msm_optionCopy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.msm_modelName {
+  overflow: hidden;
+  color: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Declared input modalities, right-aligned before the selection check. */
+.msm_caps {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  max-width: 50%;
+  overflow: hidden;
+}
+
+.msm_cap {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-tertiary) 28%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--dsw-alias-label-tertiary) 10%, transparent);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.msm_badgedName {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 4px;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.msm_badgedNameText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msm_badge {
+  flex: none;
+}
+
+.msm_check {
+  display: grid;
+  place-items: center;
+  flex: 0 0 14px;
+  color: var(--dsw-alias-label-primary);
+}
+
+.msm_check svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Bottom panel: the thinking-effort slider (ZCode's gradient track). The card
+   height is fixed, so the model list above absorbs the difference. */
+.msm_effortPanel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px 8px 6px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.msm_effortHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 20px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.msm_effortLabel {
+  color: var(--dsw-alias-label-secondary);
+}
+
+.msm_effortValue {
+  color: var(--dsw-alias-label-primary);
+}
+
+.msm_sliderWrap {
+  position: relative;
+  height: 26px;
+}
+
+/* The visible track is ours; the native track stays transparent so the thumb
+   still gets native dragging, keyboard and accessibility. */
+.msm_sliderTrack {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  right: 0;
+  height: 20px;
+  box-sizing: border-box;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.msm_sliderBase {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #22b573 0%, #14a3a3 52%, #2f6fd0 100%);
+}
+
+/* Everything to the right of the thumb reads as the empty side. */
+.msm_sliderRest {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--msm-fill, 50%);
+  background: var(--dsw-alias-bg-overlay);
+  box-shadow: inset 1px 0 0 var(--dsw-alias-border-l1);
+}
+
+.msm_sliderTicks {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  pointer-events: none;
+}
+
+.msm_sliderTicksOn {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.msm_sliderTicksOff {
+  color: color-mix(in srgb, var(--dsw-alias-label-tertiary) 78%, transparent);
+}
+
+.msm_effortSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 26px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.msm_effortSlider::-webkit-slider-runnable-track {
+  height: 20px;
+  background: transparent;
+  border-radius: 999px;
+}
+
+.msm_effortSlider::-moz-range-track {
+  height: 20px;
+  background: transparent;
+  border-radius: 999px;
+}
+
+.msm_effortSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -3px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+.msm_effortSlider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+.msm_effortSlider:focus-visible {
+  outline: none;
+}
+
+.msm_effortSlider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary));
+}
+
+.msm_effortNote {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.msm_effortSlider:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Side column: providers (hover-opened from the top bar) or effort levels
+   (from the bottom row). It floats beside the card, so the card is stable. */
+.msm_flyout {
+  box-sizing: border-box;
+  position: fixed;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  max-width: min(240px, calc(100vw - 24px));
+  /* Fixed column height (unzoomed page): the list scrolls inside it. */
+  height: min(320px, calc(100dvh - 48px));
+  overflow: hidden;
+  padding: 4px;
+  border: 0;
+  background: var(--dsw-alias-bg-base);
+  outline: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 14%, transparent);
+  outline-offset: -1px;
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+.msm_flyoutScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.msm_flyoutFooter {
+  flex: 0 0 auto;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
+}
+
+.msm_cell {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  min-width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--dsw-radius-md);
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  text-align: left;
+  outline: none;
+}
+
+.msm_cell:focus-visible {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+@media (hover: hover) {
+  .msm_cell:hover {
+    background: var(--dsw-alias-interactive-bg-hover);
+  }
+}
+
+.msm_cellLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.msm_cellValue {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.msm_manageIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--dsw-alias-menu-icon);
+}
+
+/* Mobile: the card sits as a wide sheet; side columns stack above it. */
+@media (max-width: 560px) {
+  .msm_menu {
+    width: calc(100vw - 24px);
+    max-width: 420px;
+  }
+
+  .msm_flyout {
+    width: min(240px, calc(100vw - 24px));
+  }
+}

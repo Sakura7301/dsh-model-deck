@@ -1,0 +1,75 @@
+{
+  "name": "dsh-model-deck",
+  "version": "1.0.0",
+  "description": "A card-style model picker for the DSH composer: the provider sits in the top bar and opens a provider column to the left on hover, the middle is a fixed-height scrollable model list with text/vision badges, and the bottom is an inline thinking-effort slider.",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "lib",
+    "src",
+    "build/build.mjs",
+    "build/package.json",
+    "locale/*.json",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE",
+    "assets",
+    "docs"
+  ],
+  "engines": {
+    "dsh": "^0.2.0-rc.2"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-commands",
+        "@deepseek-ai/dsh-api-remotes"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-client-locale": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-store": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.2.0-rc.2"
+  },
+  "author": "Sakura7301",
+  "maintainers": [
+    {
+      "name": "sakura7301"
+    }
+  ],
+  "scripts": {
+    "build": "node build/build.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "model",
+    "model-picker",
+    "reasoning-effort",
+    "zcode"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sakura7301/dsh-model-deck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Sakura7301/dsh-model-deck/issues"
+  },
+  "homepage": "https://github.com/Sakura7301/dsh-model-deck#readme"
+}

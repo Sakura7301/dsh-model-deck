@@ -1,0 +1,21 @@
+# dsh-model-deck 的组合包 patch
+#
+# 这是本包 `dsh.bundle.patch` 声明的那一层，在 base 与 web-app 之后应用，共两行：
+#
+#   1. 一条按 id 定位的覆盖项，停用官方自带的模型选择插件；
+#   2. 插入本包自己的 Loader 行。
+#
+# 两行都放在这里、而不是放在 profile 的用户级 `cordis.patch.yml` 里，是为了让
+# 「停用本组合包」这一步就能干净地还原官方选择器：一个 slot 只能被一个条目认领，
+# 所以只要本包开着，官方那行就必须停用；而本包的浏览器半侧原样保留了官方插件的
+# `/model` 命令贡献，因此停用官方行期间不会少任何功能。
+#
+# 如果 profile 自己的 `cordis.patch.yml` 里还留着手工挂载行
+# （`- insert: [{ id: model-deck, name: dsh-model-deck }]`）以及
+# `ui-model-selection` 的停用项，请把它们删掉：否则这一行会被挂载两次。
+- id: ui-model-selection
+  name: '@deepseek-ai/dsh-client-ui-model-selection'
+  disabled: true
+- insert:
+    - id: model-deck
+      name: 'dsh-model-deck'

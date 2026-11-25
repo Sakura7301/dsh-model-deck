@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Model menu",
+    "description": "dsh-model-deck turns the model picker into a ZCode-style card: provider top bar (column opens to the left on hover), a fixed-height scrolling model list, and thinking effort at the bottom."
+  }
+}
